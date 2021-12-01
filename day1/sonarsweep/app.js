@@ -3,7 +3,7 @@ import { createInterface } from "readline";
 
 async function readMeasurements() {
   const filename = "./measurements.txt";
-  let result = [];
+  const result = [];
 
   const fileStream = createReadStream(filename, { encoding: "utf8" });
   const rl = createInterface({
@@ -26,6 +26,9 @@ function determineLargerMeasurementCount(measurements) {
   }, 0);
 }
 
-const measurements = await readMeasurements();
+async function main() {
+  const measurements = await readMeasurements();
+  console.log(determineLargerMeasurementCount(measurements));
+}
 
-console.log(determineLargerMeasurementCount(measurements));
+main();
