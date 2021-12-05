@@ -1,6 +1,6 @@
 import { createReadStream } from "fs";
 import { createInterface } from "readline";
-import { Observable, combineLatest } from "rxjs";
+import { Observable } from "rxjs";
 import {
   map,
   share,
@@ -13,6 +13,7 @@ import {
   mergeMap,
   take,
   skipWhile,
+  defaultIfEmpty,
 } from "rxjs/operators";
 
 type GameState = {
@@ -53,13 +54,15 @@ const splitLine = (line: string) => line.split(",");
 
 const asArray = (line: string): string[] => line.match(/[^ ]+/g);
 
+const asInt = (value: string) => parseInt(value, 10);
+
 const nonEmpty = (line: string) => line !== "";
 
 const checkWinnerByLine = (boards: string[][][]) => {
   for (let bIdx = 0; bIdx < boards.length; bIdx++) {
     const currentBoard = boards[bIdx];
 
-    for (let lIdx = 0; lIdx < currentBoard.length; lIdx++) {
+    for (let lIdx = 0; lIdx < BoardSize; lIdx++) {
       const currentLine = currentBoard[lIdx];
 
       if (currentLine.every((value) => value === MarkedValue)) {
@@ -73,7 +76,7 @@ const checkWinnerByColumn = (boards: string[][][]) => {
   for (let bIdx = 0; bIdx < boards.length; bIdx++) {
     const currentBoard = boards[bIdx];
 
-    for (let cIdx = 0; cIdx < currentBoard.length; cIdx++) {
+    for (let cIdx = 0; cIdx < BoardSize; cIdx++) {
       let lIdx = 0;
       let column: string[] = [];
 
@@ -114,7 +117,7 @@ const determineWinnerBoardPunctuation = ({
   while (board[line]) {
     sum += board[line].reduce((acc, current) => {
       if (current !== MarkedValue) {
-        acc += parseInt(current, 10);
+        acc += asInt(current);
       }
       return acc;
     }, 0);
@@ -122,7 +125,7 @@ const determineWinnerBoardPunctuation = ({
     ++line;
   }
 
-  return sum * parseInt(drawnValue, 10);
+  return sum * asInt(drawnValue);
 };
 
 function main() {
@@ -142,21 +145,20 @@ function main() {
     .pipe(
       mergeMap((boards) => {
         return drawnValues
-          .pipe(tap((val) => console.log(`Drawn value: ${val}`)))
+          .pipe(tap((val) => console.log("Drawn value:", val)))
           .pipe(
             scan(
               (state, drawnValue) => {
                 state.drawnValue = drawnValue;
-                for (let bIdx = 0; bIdx < state.boards.length; bIdx++) {
-                  for (let lIdx = 0; lIdx < state.boards[bIdx].length; lIdx++) {
-                    for (
-                      let cIdx = 0;
-                      cIdx < state.boards[bIdx][lIdx].length;
-                      cIdx++
-                    ) {
-                      const currentValue = state.boards[bIdx][lIdx][cIdx];
 
-                      state.boards[bIdx][lIdx][cIdx] =
+                for (let bIdx = 0; bIdx < state.boards.length; bIdx++) {
+                  const currentBoard = state.boards[bIdx];
+
+                  for (let lIdx = 0; lIdx < BoardSize; lIdx++) {
+                    for (let cIdx = 0; cIdx < BoardSize; cIdx++) {
+                      const currentValue = currentBoard[lIdx][cIdx];
+
+                      currentBoard[lIdx][cIdx] =
                         currentValue === drawnValue
                           ? MarkedValue
                           : currentValue;
@@ -165,19 +167,22 @@ function main() {
                 }
                 return state;
               },
-              { boards, drawnValue: "" }
+              { boards, drawnValue: "" } as GameState
             )
           )
           .pipe(
             map(determineWinnerBoard),
             skipWhile((winner) => !winner),
             take(1),
-            tap((board) => console.log(board)),
+            tap((winner) => console.log("Winner:", winner)),
             map(determineWinnerBoardPunctuation)
           );
       })
     )
-    .subscribe(console.log);
+    .pipe(defaultIfEmpty("No winners!"))
+    .subscribe((winnerPunctuation) =>
+      console.log("Punctuation:", winnerPunctuation)
+    );
 }
 
 main();
