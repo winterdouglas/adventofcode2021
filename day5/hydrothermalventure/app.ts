@@ -51,17 +51,15 @@ const splitLine = (line: string) => line.split(" -> ");
 
 const asInt = (value: string) => parseInt(value, 10);
 
-const asPoints = (values: string[]) => values.map(v => v.split(",").map(asInt));
+const asPoints = (values: string[]) =>
+  values.map((v) => v.split(",").map(asInt));
 
-const nonDiagonal = (points: number[][]) => points[0][0] === points[1][0] || points[0][1] === points[1][1];
+const nonDiagonal = (points: number[][]) =>
+  points[0][0] === points[1][0] || points[0][1] === points[1][1];
 
 function main() {
   readInput
-    .pipe(
-      map(splitLine),
-      map(asPoints),
-      filter(nonDiagonal)
-    )
+    .pipe(map(splitLine), map(asPoints), filter(nonDiagonal))
     .subscribe(console.log);
 }
 
