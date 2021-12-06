@@ -1,30 +1,7 @@
 import { createReadStream } from "fs";
 import { createInterface } from "readline";
 import { Observable } from "rxjs";
-import {
-  map,
-  share,
-  skip,
-  filter,
-  bufferCount,
-  tap,
-  toArray,
-  scan,
-  mergeMap,
-  take,
-  skipWhile,
-  defaultIfEmpty,
-} from "rxjs/operators";
-
-type GameState = {
-  boards: string[][][];
-  drawnValue: string;
-};
-
-type WinnerState = {
-  board: string[][];
-  drawnValue: string;
-};
+import { map, filter, mergeMap, groupBy, toArray, count } from "rxjs/operators";
 
 const readInput = new Observable<string>((subscriber) => {
   try {
@@ -57,9 +34,46 @@ const asPoints = (values: string[]) =>
 const nonDiagonal = (points: number[][]) =>
   points[0][0] === points[1][0] || points[0][1] === points[1][1];
 
+const range = (size: number, startAt: number = 0): number[] => {
+  return [...Array(size + 1).keys()].map((i) => i + startAt);
+};
+
+const asLine = (points: number[][]) => {
+  const x1 = points[0][0];
+  const x2 = points[1][0];
+  const y1 = points[0][1];
+  const y2 = points[1][1];
+
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
+
+  const minY = Math.min(y1, y2);
+  const maxY = Math.max(y1, y2);
+
+  const rX = range(maxX - minX, minX);
+  const rY = range(maxY - minY, minY);
+
+  const line = rX.flatMap((x) => rY.map((y) => [x, y]));
+  return line;
+};
+
+const pointKey = (point: number[]) => `${point[0]} - ${point[1]}`;
+
+const byPointIntersection = (group: number[][]) => group.length > 1;
+
 function main() {
   readInput
-    .pipe(map(splitLine), map(asPoints), filter(nonDiagonal))
+    .pipe(
+      map(splitLine),
+      map(asPoints),
+      filter(nonDiagonal),
+      map(asLine),
+      mergeMap((line) => line), // Flattens line as point
+      groupBy(pointKey),
+      mergeMap((group) => group.pipe(toArray())),
+      filter(byPointIntersection),
+      count()
+    )
     .subscribe(console.log);
 }
 
