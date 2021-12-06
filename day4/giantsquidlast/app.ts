@@ -59,7 +59,7 @@ const asInt = (value: string) => parseInt(value, 10);
 
 const nonEmpty = (line: string) => line !== "";
 
-const copyArray = (array: string[][]) => array.map((arr) => arr.slice());
+const copyMatrix = (array: string[][]) => array.map((arr) => arr.slice());
 
 const boardWinsByLine = (board: string[][]) => {
   let winnerLines = 0;
@@ -160,7 +160,7 @@ function main() {
                     );
                     if (!alreadyWinner) {
                       state.winners.push({
-                        winner: copyArray(currentBoard),
+                        winner: copyMatrix(currentBoard),
                         drawnValue,
                         index: bIdx,
                       });
