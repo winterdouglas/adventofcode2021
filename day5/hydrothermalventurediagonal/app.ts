@@ -34,8 +34,29 @@ const asPoints = (values: string[]) =>
 const nonDiagonal = (points: number[][]) =>
   points[0][0] === points[1][0] || points[0][1] === points[1][1];
 
-const range = (size: number, startAt: number = 0): number[] => {
-  return [...Array(size + 1).keys()].map((i) => i + startAt);
+const range = (from: number, to: number): number[] => {
+  const size = Math.max(from, to) - Math.min(from, to) + 1;
+  const increment = from < to;
+  return [...Array(size).keys()].map((i) => {
+    return increment ? i + from : from - i;
+  });
+};
+
+const createLineRange = (x1: number, y1: number, x2: number, y2: number) => {
+  const rX = range(x1, x2);
+  const rY = range(y1, y2);
+  return rX.flatMap((x) => rY.map((y) => [x, y]));
+};
+
+const createDiagonalRange = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+) => {
+  const rX = range(x1, x2);
+  const rY = range(y1, y2);
+  return rX.map((x, idx) => [x, rY[idx]]);
 };
 
 const asLine = (points: number[][]) => {
@@ -45,46 +66,10 @@ const asLine = (points: number[][]) => {
   const y2 = points[1][1];
 
   if (nonDiagonal(points)) {
-    const minX = Math.min(x1, x2);
-    const maxX = Math.max(x1, x2);
-
-    const minY = Math.min(y1, y2);
-    const maxY = Math.max(y1, y2);
-
-    const rX = range(maxX - minX, minX);
-    const rY = range(maxY - minY, minY);
-    return rX.flatMap((x) => rY.map((y) => [x, y]));
+    return createLineRange(x1, y1, x2, y2);
   }
 
-  const diagonal: number[][] = [];
-  const xItems: number[] = [];
-  const yItems: number[] = [];
-
-  if (x1 > x2) {
-    for (let x = x2; x <= x1; x++) {
-      xItems.push(x);
-    }
-  } else {
-    for (let x = x2; x >= x1; x--) {
-      xItems.push(x);
-    }
-  }
-
-  if (y1 > y2) {
-    for (let y = y2; y <= y1; y++) {
-      yItems.push(y);
-    }
-  } else {
-    for (let y = y1; y >= y2; y--) {
-      yItems.push(y);
-    }
-  }
-
-  for (let index = 0; index < xItems.length; index++) {
-    diagonal.push([xItems[index], yItems[index]]);
-  }
-
-  return { x1, y1, x2, y2, diagonal };
+  return createDiagonalRange(x1, y1, x2, y2);
 };
 
 const pointKey = (point: number[]) => `${point[0]} - ${point[1]}`;
@@ -96,12 +81,12 @@ function main() {
     .pipe(
       map(splitLine),
       map(asPoints),
-      map(asLine)
-      // mergeMap((line) => line), // Flattens line as point
-      // groupBy(pointKey),
-      // mergeMap((group) => group.pipe(toArray())),
-      // filter(byPointIntersection),
-      // count()
+      map(asLine),
+      mergeMap((line) => line), // Flattens line as individual points
+      groupBy(pointKey),
+      mergeMap((group) => group.pipe(toArray())),
+      filter(byPointIntersection),
+      count()
     )
     .subscribe(console.log);
 }
